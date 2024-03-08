@@ -1,78 +1,83 @@
 <template>
-  <div class="container mx-auto py-8">
-    <div class="max-w-md mx-auto bg-gray-800 p-5 rounded-lg shadow-md">
-      <div class="mb-4">
-        <input
-          v-model="state.searchTerm"
-          type="text"
-          placeholder="Search users..."
-          class="w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-        />
-      </div>
-      
-      <div v-if="state.loading">
-        <div
-          class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-e-transparent align-[-0.125em] text-surface motion-reduce:animate-[spin_1.5s_linear_infinite] dark:text-white"
-          role="status">
-          <span
-            class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-            >Loading...</span
-          >
-        </div>
-      </div>
-      <ul v-else>
-        <li
-          v-for="(user, index) in renderedUsers"
-          :key="index"
-          class="flex items-center py-2 border-b border-gray-700"
+  <div>
+    <div v-if="loading">
+      <div
+        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-e-transparent align-[-0.125em] text-surface motion-reduce:animate-[spin_1.5s_linear_infinite] dark:text-white"
+        role="status">
+        <span
+          class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
+          >Loading...</span
         >
-          <img
-            alt="User"
-            class="w-10 h-10 rounded-full mr-3"
-            v-bind:src="user.avatar_url"
-          />
-          <span class="text-gray-300">{{user.login}}</span>
-        </li>
-      </ul>
+      </div>
     </div>
+    <ul v-else>
+      <li
+        v-for="(user, index) in users"
+        :key="index"
+        class="flex items-center py-2 border-b border-gray-700"
+      >
+        <img
+          alt="User"
+          class="w-10 h-10 rounded-full mr-3"
+          v-bind:src="user.avatar_url"
+        />
+        <span class="text-gray-300">{{user.login}}</span>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script setup>
 import {
-  computed,
+  defineProps,
   onMounted,
-  reactive,
+  ref,
+  watch,
 } from 'vue';
 
-const state = reactive({
-  users: [],
-  loading: false,
-  searchTerm: '',
+const props = defineProps({
+  searchTerm: {
+    type: String,
+    default: '',
+  }
 });
 
+let debounceTimer = null;
+
+const loading = ref(false);
+const users = ref([]);
+
 const loadUsers = async () => {
-  state.loading = true;
+  loading.value = true;
+  let data;
   try {
-    const res = await fetch('https://api.github.com/users');
-    const data = await res.json();
-    state.users = data;
+    if (props.searchTerm.length > 0) {
+      const res = await fetch(`https://api.github.com/search/users?q=${props.searchTerm}&per_page=10`);
+      const json = await res.json();
+      data = json.items;
+    } else {
+      const res = await fetch('https://api.github.com/users');
+      data = await res.json();
+    }
+    users.value = data;
   } finally {
-    state.loading = false;
+    loading.value = false;
   }
 };
 
-const renderedUsers = computed(() => {
-  if (state.searchTerm.length > 0) {
-    return state.users.filter((user) => {
-      return state.searchTerm.toLowerCase().split(' ').every((v) => user.login.toLowerCase().includes(v));
-    });
+watch(() => props.searchTerm, async (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    // searchTerm.value = newValue;
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(async () => {
+      await loadUsers();
+    }, 250);
   }
-  return state.users;
-});
+})
 
 onMounted(loadUsers);
-
 </script>
 
 <style>

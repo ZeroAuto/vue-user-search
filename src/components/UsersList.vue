@@ -67,7 +67,6 @@ const loadUsers = async () => {
 
 watch(() => props.searchTerm, async (newValue, oldValue) => {
   if (newValue !== oldValue) {
-    // searchTerm.value = newValue;
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }

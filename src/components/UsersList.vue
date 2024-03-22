@@ -65,6 +65,9 @@ const loadUsers = async () => {
   }
 };
 
+// watch(inputText.value, (next, prev) =>{
+//   do something
+// })
 watch(() => props.searchTerm, async (newValue, oldValue) => {
   if (newValue !== oldValue) {
     if (debounceTimer) {
@@ -76,7 +79,11 @@ watch(() => props.searchTerm, async (newValue, oldValue) => {
   }
 })
 
-onMounted(loadUsers);
+onMounted(() => {
+  loadUsers();
+  // do some other stuff, see before for simple callback
+})
+// onMounted(loadUsers);
 </script>
 
 <style>
